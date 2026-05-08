@@ -1,0 +1,40 @@
+# /etc/systemd/system/diabetes-frontend.service
+#
+# Systemd service for the Next.js frontend (production build).
+# next start serves the built app on port 3000, bound to localhost.
+# Nginx proxies public port 80 → 3000.
+#
+# Manage with:
+#   sudo systemctl start   diabetes-frontend
+#   sudo systemctl stop    diabetes-frontend
+#   sudo systemctl restart diabetes-frontend
+#   sudo systemctl status  diabetes-frontend
+#   sudo journalctl -u diabetes-frontend -f
+
+[Unit]
+Description=Diabetes EMR Next.js Frontend
+After=network.target
+
+[Service]
+Type=simple
+User=sam
+Group=sam
+WorkingDirectory=/home/sam/app/frontend
+
+ExecStart=/usr/bin/npm start
+# Or use the node binary directly for more control:
+# ExecStart=/usr/bin/node_modules/.bin/next start
+
+Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+
+# Tell Next.js which port to bind (must match nginx upstream)
+Environment="PORT=3000"
+# Point to the backend (used by any SSR pages that call the API server-side)
+Environment="NEXT_PUBLIC_API_URL=http://localhost:8000"
+
+[Install]
+WantedBy=multi-user.target
