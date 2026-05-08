@@ -26,7 +26,7 @@
 const BASE_URL =
   typeof process.env.NEXT_PUBLIC_API_URL === 'string'
     ? process.env.NEXT_PUBLIC_API_URL   // '' in prod (relative), 'http://...' in dev
-    : 'http://localhost:8000';           // SSR fallback during local dev
+    : '';                               // SSR fallback — empty = relative URL, works behind nginx
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Core fetch helper
