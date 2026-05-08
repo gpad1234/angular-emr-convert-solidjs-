@@ -257,3 +257,87 @@ Ideas for future development:
 - **CGM data import**: Parse LibreView/Dexcom CSV exports
 - **Medication reminders**: Schedule reminders via Twilio or push notifications
 - **A1c estimator**: Calculate estimated A1c from average glucose readings
+
+---
+
+## Production Deployment (DigitalOcean Droplet)
+
+The `deploy/` folder contains everything needed to run this on a Linux server.
+
+### Live URLs
+
+| URL | Purpose |
+|-----|---------|
+| http://142.93.62.131 | Mobile EMR app |
+| http://142.93.62.131/docs | Swagger API docs |
+| http://142.93.62.131/redoc | ReDoc API docs |
+
+### Architecture on the droplet
+
+```
+Browser (port 80)
+      │
+   nginx          ← reverse proxy / static asset cache
+    ├── /api/*  → uvicorn :8000   (FastAPI)
+    └── /*      → next start :3000 (Next.js production build)
+```
+
+Both services run as systemd units under the `sam` user (never root).
+
+### Deploy files
+
+| File | Purpose |
+|------|---------|
+| `deploy/deploy.sh` | Server-side script: installs deps, clones repo, builds app, configures nginx + systemd |
+| `deploy/diabetes-api.service` | Systemd unit for the FastAPI/uvicorn backend |
+| `deploy/diabetes-frontend.service` | Systemd unit for the Next.js frontend |
+| `deploy/nginx-diabetes-emr` | Nginx site config (reverse proxy) |
+| `deploy-remote.sh` | Local helper: SSHs into the droplet and runs `deploy.sh` |
+
+### First-time setup
+
+```bash
+# 1. Ensure SSH access to the droplet
+ssh sam@142.93.62.131
+
+# 2. From your local machine, run:
+./deploy-remote.sh
+```
+
+### Redeploying after code changes
+
+```bash
+git add -A && git commit -m "your change" && git push
+./deploy-remote.sh   # pulls latest, rebuilds, restarts services
+```
+
+`deploy.sh` is **idempotent** — safe to run multiple times.
+
+### Managing services on the server
+
+```bash
+# Status
+sudo systemctl status diabetes-api
+sudo systemctl status diabetes-frontend
+
+# Restart
+sudo systemctl restart diabetes-api
+sudo systemctl restart diabetes-frontend
+
+# Live logs
+sudo journalctl -u diabetes-api -f
+sudo journalctl -u diabetes-frontend -f
+
+# Nginx
+sudo nginx -t                     # test config
+sudo systemctl reload nginx       # apply config changes
+sudo tail -f /var/log/nginx/diabetes-emr.error.log
+```
+
+### Environment on the server
+
+| Variable | Value | Set in |
+|----------|-------|--------|
+| `DATABASE_URL` | `sqlite:////home/sam/app/backend/diabetes_emr.db` | `diabetes-api.service` |
+| `NEXT_PUBLIC_API_URL` | *(empty — nginx proxies /api/*)* | `frontend/.env.local` (written by deploy.sh) |
+| `PORT` | `3000` | `diabetes-frontend.service` |
