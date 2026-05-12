@@ -22,15 +22,21 @@ module.exports = {
 
   theme: {
     extend: {
+      // ── Inter font via CSS variable (set in _app.js) ─────────────────────
+      fontFamily: {
+        sans: ['var(--font-inter)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
+
       // ── Custom color palette ───────────────────────────────────────────────
       colors: {
-        // Primary brand colors (medical blue/teal)
+        // Primary brand colors — teal/cyan for a modern clinical feel
         primary: {
-          50:  "#eff6ff",
-          100: "#dbeafe",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
+          50:  "#f0fdfa",
+          100: "#ccfbf1",
+          200: "#99f6e4",
+          500: "#14b8a6",
+          600: "#0d9488",
+          700: "#0f766e",
         },
         // Glucose level colors — used for visual urgency coding
         glucose: {

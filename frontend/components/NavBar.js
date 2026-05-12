@@ -61,13 +61,9 @@ export default function NavBar() {
   const router = useRouter();
 
   return (
-    // Fixed to viewport bottom. z-50 keeps it above page content.
-    // pb-safe adds padding for the iOS home indicator (safe area inset).
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm border-t border-gray-200/60 pb-safe">
       <div className="max-w-lg mx-auto flex items-center justify-around h-16">
         {NAV_ITEMS.map(({ href, label, icon }) => {
-          // Determine if this nav item matches the current route
-          // Exact match for home, prefix match for other sections
           const isActive =
             href === '/'
               ? router.pathname === '/'
@@ -77,15 +73,18 @@ export default function NavBar() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center gap-0.5 py-1 px-3 min-w-0 flex-1
-                          transition-colors duration-150
-                          ${isActive ? 'text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
+              className="flex flex-col items-center gap-0.5 py-1 px-3 min-w-0 flex-1"
             >
-              {icon(isActive)}
-              <span className={`text-2xs font-medium truncate
-                               ${isActive ? 'text-primary-600' : 'text-gray-500'}`}>
-                {label}
-              </span>
+              {/* Active state: pill background highlight */}
+              <div className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-2xl
+                               transition-all duration-200
+                               ${isActive ? 'bg-primary-50' : ''}`}>
+                {icon(isActive)}
+                <span className={`text-2xs font-semibold truncate
+                                 ${isActive ? 'text-primary-600' : 'text-gray-400'}`}>
+                  {label}
+                </span>
+              </div>
             </Link>
           );
         })}

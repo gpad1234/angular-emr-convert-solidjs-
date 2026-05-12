@@ -341,3 +341,231 @@ sudo tail -f /var/log/nginx/diabetes-emr.error.log
 | `DATABASE_URL` | `sqlite:////home/sam/app/backend/diabetes_emr.db` | `diabetes-api.service` |
 | `NEXT_PUBLIC_API_URL` | *(empty — nginx proxies /api/*)* | `frontend/.env.local` (written by deploy.sh) |
 | `PORT` | `3000` | `diabetes-frontend.service` |
+
+---
+
+## Technical Specification
+
+### Overview
+
+Diabetes EMR is a mobile-first Electronic Medical Records system for diabetes care teams. It provides a practitioner-facing interface to view patient populations, track glycemic control over time, manage medications, and review appointment history.
+
+**Scope:** MVP — read-heavy clinical viewer with light data-entry (add glucose readings, medications, appointments). Authentication, audit logs, and multi-provider support are deferred.
+
+---
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────┐
+│                     Browser / Mobile                │
+│                                                     │
+│   Next.js 14 (Pages Router)  ←  SWR cache layer    │
+│   Tailwind CSS  |  Recharts  |  date-fns            │
+└───────────────────┬─────────────────────────────────┘
+                    │ HTTP/JSON  (/api/v1/*)
+┌───────────────────▼─────────────────────────────────┐
+│               FastAPI  (Python 3.10+)               │
+│                                                     │
+│   Pydantic v2 validation  →  SQLAlchemy ORM         │
+│   5 routers: patients, glucose, medications,        │
+│              appointments, stats                    │
+└───────────────────┬─────────────────────────────────┘
+                    │ SQLAlchemy sessions
+┌───────────────────▼─────────────────────────────────┐
+│      SQLite (dev)  /  PostgreSQL or MySQL (prod)    │
+│      File: diabetes_emr.db                         │
+└─────────────────────────────────────────────────────┘
+```
+
+**Production (DigitalOcean):**
+```
+Browser :80
+    │
+  nginx  ──── /api/*  →  uvicorn :8000  (FastAPI)
+         └──  /*      →  next start :3000
+```
+
+---
+
+### Backend Components
+
+#### `database.py` — Connection layer
+- Creates the SQLAlchemy `engine` from `DATABASE_URL` (env var; falls back to `sqlite:///./diabetes_emr.db`)
+- Exports `SessionLocal` (session factory) and `Base` (ORM declarative base)
+- `get_db()` FastAPI dependency: yields a DB session per request, closes on exit
+
+#### `models.py` — ORM / Database schema
+Six tables with cascade-delete relationships anchored on `Patient`:
+
+| Model | Table | Key columns |
+|-------|-------|-------------|
+| `Patient` | `patients` | id, first/last name, DOB, gender, diabetes_type, provider, height_cm, weight_kg |
+| `GlucoseReading` | `glucose_readings` | patient_id (FK), value_mgdl, reading_type, reading_datetime |
+| `HbA1cReading` | `hba1c_readings` | patient_id (FK), value_pct, test_date, lab_name |
+| `BloodPressureReading` | `blood_pressure_readings` | patient_id (FK), systolic, diastolic, recorded_at |
+| `Medication` | `medications` | patient_id (FK), name, dose, frequency, start_date, end_date |
+| `Appointment` | `appointments` | patient_id (FK), appointment_datetime, type, status, notes |
+
+**Enumerations** (stored as strings for JSON compatibility):
+- `DiabetesType`: Type 1, Type 2, Gestational, LADA, Prediabetes, Other
+- `GlucoseReadingType`: Fasting, Post-meal, Pre-meal, Bedtime, Random
+- `AppointmentStatus`: Scheduled, Completed, Cancelled, No-show
+- `AppointmentType`: Routine Follow-up, Diabetes Management, Lab Review, Urgent Visit, Telehealth, Dietitian Consult, Ophthalmology, Podiatry, Nephrology
+- `Gender`: Male, Female, Other, Prefer not to say
+
+#### `schemas.py` — Pydantic request/response models
+Follows a `*Base / *Create / *Response / *List` naming pattern. `ORMBase` (inherits `ConfigDict(from_attributes=True)`) is the parent for all response schemas, enabling direct construction from SQLAlchemy ORM objects.
+
+Key computed fields:
+- `PatientResponse.bmi` — computed from `height_cm` / `weight_kg`
+- `GlucoseReadingResponse.level_label` — ADA classification string (Critical Low → Very High)
+- `MedicationResponse.is_active` — `True` when `end_date` is `None`
+
+#### `main.py` — Application entry point
+- Registers `CORSMiddleware` (allows `localhost:3000` and `localhost:3001` in dev; configurable for prod)
+- Mounts all routers under prefix `/api/v1`
+- `lifespan` handler: runs `Base.metadata.create_all()` and `seed_database()` on startup
+
+#### `sample_data.py` — Seed data
+Seeds 15 realistic patients with diabetes-specific profiles plus associated glucose readings, HbA1c history, medications, blood pressure readings, and appointments. Checks for existing data before inserting (idempotent).
+
+#### Routers
+
+| File | Prefix | Endpoints |
+|------|--------|-----------|
+| `patients.py` | `/api/v1` | `GET /patients`, `GET /patients/{id}`, `GET /patients/{id}/summary`, `POST /patients` |
+| `glucose.py` | `/api/v1` | `GET /patients/{id}/glucose`, `POST /patients/{id}/glucose`, `GET /patients/{id}/hba1c`, `POST /patients/{id}/hba1c` |
+| `medications.py` | `/api/v1` | `GET /patients/{id}/medications`, `GET /patients/{id}/medications/active`, `POST /patients/{id}/medications`, `PATCH /patients/{id}/medications/{med_id}/discontinue` |
+| `appointments.py` | `/api/v1` | `GET /patients/{id}/appointments`, `POST /patients/{id}/appointments` |
+| `stats.py` | `/api/v1` | `GET /stats/dashboard` |
+
+All list endpoints use `skip` / `limit` offset pagination and return `total` + `has_more` for frontend "Load More" controls.
+
+---
+
+### Frontend Components
+
+#### Pages
+
+| Page | Route | Data source | Description |
+|------|-------|-------------|-------------|
+| `index.js` | `/` | `GET /api/v1/stats/dashboard` | Population dashboard — patient counts by diabetes type, avg HbA1c, high-HbA1c alert, recent hypoglycemia alert, active medication count |
+| `patients/index.js` | `/patients` | `GET /api/v1/patients` | Searchable, filterable patient list with Load More pagination |
+| `patients/[id].js` | `/patients/:id` | `GET /api/v1/patients/:id/summary` + `GET /api/v1/patients/:id/glucose` | Full patient detail view: header, clinical alerts, latest vitals, HbA1c trend, medications, appointments, glucose history chart |
+
+#### UI Components
+
+| Component | Purpose |
+|-----------|---------|
+| `Layout.js` | Page shell: safe-area-aware header, back button, bottom padding for NavBar |
+| `NavBar.js` | Fixed bottom navigation bar (Dashboard / Patients) |
+| `PatientCard.js` | Patient row card for the list view (name, age, type badge, last HbA1c) |
+| `DiabetesTypeBadge.js` | Color-coded pill for diabetes classification |
+| `HbA1cBadge.js` | HbA1c value with ADA risk-level color (green / amber / red) |
+| `GlucoseChart.js` | Recharts `LineChart` rendered client-side only (`dynamic(..., {ssr:false})`) — plots glucose readings over time with reference bands |
+| `MedicationList.js` | Grouped active / inactive medication rows |
+| `AppointmentList.js` | Appointment history rows with status badge |
+| `LoadMoreButton.js` | Button that triggers the next page fetch; shows spinner while loading |
+
+#### `lib/api.js` — API client
+- `BASE_URL`: reads `NEXT_PUBLIC_API_URL` env var; empty string in production (relative URL, nginx proxies)
+- `apiFetch(path, options)`: wraps `fetch()` with base URL, JSON headers, and structured error extraction from FastAPI `{ detail: ... }` responses
+- `fetcher(url)`: thin wrapper passed to SWR as the global fetcher
+- `post(path, body)` / `patch(path, body)`: convenience mutation helpers
+- Utility functions: `calculateAge(dob)`, `classifyGlucose(mgdl)`, `buildGlucoseUrl(id, skip, limit)`, `formatDate(d)`, `formatDateTime(dt)`
+
+---
+
+### Data Flow
+
+#### Dashboard load
+```
+Browser
+  └─ useSWR('/api/v1/stats/dashboard')
+       └─ FastAPI GET /stats/dashboard
+            └─ SQL aggregates (COUNT, AVG, GROUP BY) on patients, hba1c_readings,
+               glucose_readings, medications
+                 └─ DashboardStats response → rendered as stat cards + alerts
+```
+
+#### Patient list with search
+```
+User types in search box
+  └─ debounced URL update: /api/v1/patients?search=chen&skip=0&limit=20
+       └─ FastAPI: ILIKE filter on first_name | last_name → PatientListResponse
+            └─ PatientCard grid + "Load More" (increments skip by 20)
+```
+
+#### Patient detail load
+```
+/patients/42
+  ├─ useSWR('/api/v1/patients/42/summary')    ← single call: all vitals + meds + appts
+  │    └─ PatientSummaryResponse
+  │         ├─ Patient info + BMI
+  │         ├─ Latest HbA1c, glucose, blood pressure
+  │         ├─ HbA1c trend (last 4 readings)
+  │         ├─ Active medications
+  │         └─ Upcoming appointments
+  │
+  └─ useEffect → fetchGlucose(skip=0, limit=20)   ← separate paginated call
+       └─ GlucoseListResponse → GlucoseChart + timeline list
+            └─ "Load More" → fetchGlucose(skip=20) → appended to state
+```
+
+#### Add glucose reading
+```
+Clinician submits form
+  └─ post('/api/v1/patients/42/glucose', { value_mgdl, reading_type, reading_datetime })
+       └─ FastAPI: Pydantic validates → INSERT → GlucoseReadingResponse
+            └─ Frontend mutates SWR cache → list re-renders
+```
+
+#### Discontinue medication
+```
+PATCH /api/v1/patients/42/medications/7/discontinue
+  └─ FastAPI: sets end_date = today → MedicationResponse (is_active: false)
+       └─ Medication moves from active → history section
+```
+
+---
+
+### Database Schema (ERD summary)
+
+```
+patients (1)
+  ├──< glucose_readings      (patient_id FK, cascade delete)
+  ├──< hba1c_readings        (patient_id FK, cascade delete)
+  ├──< blood_pressure_readings (patient_id FK, cascade delete)
+  ├──< medications           (patient_id FK, cascade delete)
+  └──< appointments          (patient_id FK, cascade delete)
+```
+
+All child tables use `ON DELETE CASCADE` enforced at the ORM layer (`cascade="all, delete-orphan"`).
+
+---
+
+### Clinical Logic
+
+| Rule | Location | Detail |
+|------|----------|--------|
+| Glucose classification | `lib/api.js` `classifyGlucose()` + `schemas.py` `level_label` | <54 Critical Low, 54–69 Low, 70–130 Normal, 131–180 Slightly High, 181–250 High, >250 Very High |
+| HbA1c risk classification | `HbA1cBadge.js` | <7% green, 7–9% amber, >9% red (ADA targets) |
+| BMI calculation | `schemas.py` `PatientResponse` | weight_kg / (height_m²), rounded to 1 decimal |
+| High HbA1c alert threshold | `stats.py` | >9.0% — patients flagged as at-risk |
+| Hypoglycemia alert window | `stats.py` | glucose <70 mg/dL in last 7 days |
+| Average HbA1c window | `stats.py` | Tests in last 30 days |
+
+---
+
+### Key Design Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| SQLite in dev | Zero config; swap to PostgreSQL via `DATABASE_URL` env var — no code changes |
+| Offset pagination (`skip`/`limit`) | Simple "Load More" UX; acceptable for datasets up to ~100k records |
+| `GET /patients/{id}/summary` mega-endpoint | Avoids N+1 waterfall on patient detail page; returns all clinical sub-resources in one round trip |
+| SWR for data fetching | Stale-while-revalidate gives instant perceived load on navigation; automatic deduplication |
+| `dynamic(..., {ssr:false})` for GlucoseChart | Recharts uses browser APIs (ResizeObserver); disabling SSR prevents hydration mismatch |
+| Pydantic `*Create` / `*Response` split | Prevents accidental over-posting and leaking internal DB columns |
+| Enums stored as strings | Readable JSON responses without enum serialization boilerplate |

@@ -42,7 +42,9 @@ export default function Layout({ title, children, showBack, onBack, headerRight 
       <div className="min-h-screen bg-gray-50 flex flex-col">
 
         {/* ── Top header bar ────────────────────────────────────────────────── */}
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-40 pt-safe">
+        <header className="bg-white/90 backdrop-blur-sm border-b border-gray-200/60 sticky top-0 z-40 pt-safe">
+          {/* Teal accent line across the very top */}
+          <div className="h-0.5 w-full bg-gradient-to-r from-primary-500 via-primary-400 to-primary-600" />
           <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
 
             {/* Left: back button or spacer */}
@@ -50,10 +52,9 @@ export default function Layout({ title, children, showBack, onBack, headerRight 
               {showBack && (
                 <button
                   onClick={onBack}
-                  className="p-2 -ml-2 rounded-xl text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                  className="p-2 -ml-2 rounded-xl text-gray-500 hover:bg-gray-100 active:bg-gray-200 transition-colors"
                   aria-label="Go back"
                 >
-                  {/* Left chevron SVG */}
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
@@ -62,11 +63,14 @@ export default function Layout({ title, children, showBack, onBack, headerRight 
             </div>
 
             {/* Center: page title */}
-            <h1 className="text-base font-semibold text-gray-900 truncate">
-              {title || 'Diabetes EMR'}
+            <h1 className="text-base font-semibold text-gray-800 tracking-tight truncate">
+              {showBack
+                ? (title || 'Diabetes EMR')
+                : <span><span className="text-primary-600 font-bold">Diabetes</span> EMR</span>
+              }
             </h1>
 
-            {/* Right: optional action (e.g. add button, avatar) */}
+            {/* Right: optional action */}
             <div className="w-10 flex justify-end">
               {headerRight || null}
             </div>

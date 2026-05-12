@@ -23,21 +23,19 @@ export default function PatientCard({ patient }) {
   const age = calculateAge(patient.date_of_birth);
 
   return (
-    // The entire card is a link to the patient detail page
-    <Link href={`/patients/${patient.id}`} className="block">
+    <Link href={`/patients/${patient.id}`} className="block mb-3">
       <article
-        className="card mb-3 active:scale-98 transition-transform duration-100
-                   hover:shadow-md cursor-pointer"
-        // aria-label for screen readers
+        className="card-interactive cursor-pointer overflow-hidden"
         aria-label={`View ${patient.first_name} ${patient.last_name}'s record`}
       >
+        {/* Colored top accent bar keyed to diabetes type */}
+        <div className={`h-1 -mx-4 -mt-4 mb-4 rounded-t-2xl ${getTypeAccent(patient.diabetes_type)}`} />
         <div className="flex items-start justify-between gap-3">
 
           {/* ── Patient avatar (initials) ──────────────────────────────────── */}
-          <div className="flex-shrink-0 w-11 h-11 rounded-full bg-primary-100
-                          flex items-center justify-center">
-            <span className="text-primary-700 font-bold text-sm">
-              {/* First letter of each name */}
+          <div className={`flex-shrink-0 w-11 h-11 rounded-full ${getTypeAvatarBg(patient.diabetes_type)}
+                          flex items-center justify-center shadow-sm`}>
+            <span className={`font-bold text-sm ${getTypeAvatarText(patient.diabetes_type)}`}>
               {patient.first_name[0]}{patient.last_name[0]}
             </span>
           </div>
@@ -105,4 +103,40 @@ function getBmiColor(bmi) {
   if (bmi < 25)   return 'text-green-600';
   if (bmi < 30)   return 'text-amber-600';
   return 'text-red-600';
+}
+
+// Gradient accent bar across top of card, keyed to diabetes type
+function getTypeAccent(type) {
+  const map = {
+    'Type 1':     'bg-gradient-to-r from-blue-400 to-blue-500',
+    'Type 2':     'bg-gradient-to-r from-violet-400 to-violet-500',
+    'LADA':       'bg-gradient-to-r from-indigo-400 to-indigo-500',
+    'Gestational':'bg-gradient-to-r from-pink-400 to-pink-500',
+    'Prediabetes':'bg-gradient-to-r from-amber-400 to-amber-500',
+  };
+  return map[type] || 'bg-gradient-to-r from-gray-300 to-gray-400';
+}
+
+// Avatar background per type
+function getTypeAvatarBg(type) {
+  const map = {
+    'Type 1':     'bg-blue-100',
+    'Type 2':     'bg-violet-100',
+    'LADA':       'bg-indigo-100',
+    'Gestational':'bg-pink-100',
+    'Prediabetes':'bg-amber-100',
+  };
+  return map[type] || 'bg-gray-100';
+}
+
+// Avatar text color per type
+function getTypeAvatarText(type) {
+  const map = {
+    'Type 1':     'text-blue-700',
+    'Type 2':     'text-violet-700',
+    'LADA':       'text-indigo-700',
+    'Gestational':'text-pink-700',
+    'Prediabetes':'text-amber-700',
+  };
+  return map[type] || 'text-gray-600';
 }

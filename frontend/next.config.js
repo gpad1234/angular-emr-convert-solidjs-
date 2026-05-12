@@ -21,6 +21,18 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Proxy /api/* requests to the FastAPI backend in development.
+  // This avoids needing NEXT_PUBLIC_API_URL in .env.local and works
+  // the same way as the production nginx reverse-proxy setup.
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'http://localhost:8000/api/:path*',
+      },
+    ];
+  },
+
   // Allow images from external domains if you add patient photos later
   // images: { domains: ['your-image-cdn.com'] },
 };

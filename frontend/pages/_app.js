@@ -17,8 +17,15 @@
  */
 
 import { SWRConfig } from 'swr';
+import { Inter } from 'next/font/google';
 import { fetcher } from '@/lib/api';
 import '@/styles/globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
 
 /**
  * @param {object} props
@@ -27,17 +34,17 @@ import '@/styles/globals.css';
  */
 export default function App({ Component, pageProps }) {
   return (
-    // SWRConfig sets defaults for all useSWR calls in the app.
-    // Individual hooks can still override these per-call.
     <SWRConfig
       value={{
-        fetcher,                    // Use our centralized fetch wrapper
-        revalidateOnFocus: false,   // Don't auto-refresh on tab focus
-        shouldRetryOnError: false,  // Surface errors immediately
-        dedupingInterval: 5000,     // Deduplicate identical requests within 5s
+        fetcher,
+        revalidateOnFocus: false,
+        shouldRetryOnError: false,
+        dedupingInterval: 5000,
       }}
     >
-      <Component {...pageProps} />
+      <div className={`${inter.variable} font-sans`}>
+        <Component {...pageProps} />
+      </div>
     </SWRConfig>
   );
 }
