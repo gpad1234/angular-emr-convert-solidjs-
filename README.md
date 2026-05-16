@@ -1,7 +1,7 @@
 # Diabetes EMR — Developer Guide
 
 A mobile-first Electronic Medical Record (EMR) focused on diabetes care.
-Built with FastAPI (Python) + Next.js (React), heavily commented for maintainability.
+Built with FastAPI (Python) + Vue 3 (Vite), heavily commented for maintainability.
 
 ---
 
@@ -13,9 +13,10 @@ Built with FastAPI (Python) + Next.js (React), heavily commented for maintainabi
 | ORM        | SQLAlchemy                             | 2.0.30   |
 | Database   | SQLite (dev) / any SQL in prod         | —        |
 | Validation | Pydantic v2                            | 2.7.1    |
-| Frontend   | Next.js (Pages Router)                 | 14.2.3   |
-| Data fetch | SWR                                    | 2.2.5    |
-| Charts     | Recharts                               | 2.12.7   |
+| Frontend   | Vue 3 + Vite                           | 3.3 / 5  |
+| Routing    | Vue Router 4                           | 4.2.2    |
+| Data fetch | Axios                                  | 1.4.0    |
+| Charts     | Chart.js + chartjs-plugin-annotation   | 4.x      |
 | Styling    | Tailwind CSS                           | 3.4.3    |
 
 ---
@@ -84,26 +85,34 @@ npm run dev
 │       └── stats.py         # GET /stats/dashboard
 │
 └── frontend/
-    ├── pages/
-    │   ├── _app.js          # SWR provider, global CSS
-    │   ├── index.js         # Dashboard (population stats)
-    │   └── patients/
-    │       ├── index.js     # Patient list + search + filter + load more
-    │       └── [id].js      # Patient detail (vitals, meds, glucose chart)
-    ├── components/
-    │   ├── Layout.js        # Page wrapper (header, back button, nav padding)
-    │   ├── NavBar.js        # Fixed bottom navigation
-    │   ├── PatientCard.js   # Patient list row card
-    │   ├── DiabetesTypeBadge.js  # Color-coded type pill
-    │   ├── HbA1cBadge.js        # HbA1c value with classification color
-    │   ├── GlucoseChart.js      # Recharts line chart (no-SSR)
-    │   ├── MedicationList.js    # Active/inactive medication list
-    │   ├── AppointmentList.js   # Appointment history rows
-    │   └── LoadMoreButton.js    # Paginated "load more" control
-    ├── lib/
-    │   └── api.js           # Fetch helpers, URL builders, classifiers
-    └── styles/
-        └── globals.css      # Tailwind base + custom component classes
+    ├── src/
+    │   ├── main.js              # App bootstrap (createApp + router)
+    │   ├── App.vue              # Root component (<router-view>)
+    │   ├── router/index.js      # Route definitions
+    │   ├── lib/api.js           # Axios client, URL builders, classifiers
+    │   ├── styles/globals.css   # Tailwind base + custom classes
+    │   ├── pages/
+    │   │   ├── Dashboard.vue        # / — population stats
+    │   │   ├── Settings.vue         # /settings
+    │   │   └── patients/
+    │   │       ├── Index.vue        # /patients — search + filter + load more
+    │   │       └── PatientDetail.vue# /patients/:id — vitals, meds, glucose chart
+    │   └── components/
+    │       ├── Layout.vue           # Page shell (header + NavBar)
+    │       ├── NavBar.vue           # Fixed bottom navigation
+    │       ├── StatCard.vue         # Metric card (clickable when `to` set)
+    │       ├── PatientCard.vue      # Patient list row card
+    │       ├── PatientDetailSkeleton.vue # Loading skeleton
+    │       ├── GlucoseChart.vue     # Chart.js line chart + 70-180 target band
+    │       ├── HbA1cBadge.vue       # HbA1c value with classification colour
+    │       ├── DiabetesTypeBadge.vue# Colour-coded type pill
+    │       ├── MedicationList.vue   # Active/inactive medication list
+    │       ├── AppointmentList.vue  # Appointment history rows
+    │       └── LoadMoreButton.vue   # Paginated "load more" control
+    ├── index.html               # Vite HTML entry point
+    ├── vite.config.js           # Vite config (proxy /api → :8000)
+    ├── tailwind.config.js
+    └── package.json
 ```
 
 ---
@@ -201,9 +210,12 @@ rm backend/diabetes_emr.db
 
 ### Adding a new page
 
-1. Create `frontend/pages/your-page.js`
-2. Use `<Layout title="Your Page">` as the wrapper
-3. Use `useSWR('/api/v1/your-endpoint')` for data fetching
+1. Create `frontend/src/pages/YourPage.vue` with `<Layout title="Your Page">` as the wrapper
+2. Add a route in `frontend/src/router/index.js`:
+   ```js
+   { path: '/your-page', component: () => import('../pages/YourPage.vue') }
+   ```
+3. Use Axios via `src/lib/api.js` inside `onMounted` for data fetching
 
 ### Changing the database (for production)
 
@@ -220,7 +232,7 @@ skipped for non-SQLite databases.
 
 ### Glucose classification thresholds
 
-Defined in `frontend/lib/api.js` (`classifyGlucose()`):
+Defined in `frontend/src/lib/api.js` (`classifyGlucose()`):
 
 | Range (mg/dL) | Label           | Color  |
 |---------------|-----------------|--------|
@@ -240,10 +252,10 @@ Defined in `frontend/lib/api.js` (`classifyGlucose()`):
 |----------------|--------------------------------|---------------------------|
 | DATABASE_URL   | sqlite:///./diabetes_emr.db    | Database connection string |
 
-### Frontend (`.env.local`)
-| Variable              | Default                  | Description           |
-|-----------------------|--------------------------|-----------------------|
-| NEXT_PUBLIC_API_URL   | http://localhost:8000    | Backend base URL      |
+### Frontend (`frontend/.env`)
+| Variable       | Default | Description                                          |
+|----------------|---------|------------------------------------------------------|
+| VITE_API_URL   | *(empty — Vite proxy forwards `/api/*` to `:8000`)* | Override backend base URL for production builds |
 
 ---
 
@@ -569,3 +581,9 @@ All child tables use `ON DELETE CASCADE` enforced at the ORM layer (`cascade="al
 | `dynamic(..., {ssr:false})` for GlucoseChart | Recharts uses browser APIs (ResizeObserver); disabling SSR prevents hydration mismatch |
 | Pydantic `*Create` / `*Response` split | Prevents accidental over-posting and leaking internal DB columns |
 | Enums stored as strings | Readable JSON responses without enum serialization boilerplate |
+
+
+I can integrate vue-query for caching/revalidation (recommended to match SWR behavior).
+I can enhance GlucoseChart.vue with threshold lines, tooltips, and multi-series support.
+I can implement accessibility polish and keyboard navigation.
+Or I can stop here.
