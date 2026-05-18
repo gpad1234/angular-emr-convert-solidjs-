@@ -2,12 +2,11 @@ process.env.DATABASE_PATH = ':memory:'
 
 const request = require('supertest')
 const { app, initDb } = require('../server')
-const { resetDb } = require('../database')
+const { clearAndSeed } = require('../database')
 
 beforeEach(() => {
-  // ensure a clean DB for every test: remove rows then initialise/seed
-  resetDb()
-  initDb()
+  // ensure a clean seeded DB for every test
+  clearAndSeed()
 })
 
 test('GET /api/v1/patients returns patients list', async () => {

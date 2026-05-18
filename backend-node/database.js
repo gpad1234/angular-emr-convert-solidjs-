@@ -484,3 +484,11 @@ function resetDb() {
 }
 
 module.exports = { db, initDb, resetDb }
+
+// Convenience helper for tests: clear all rows and re-seed schema/data
+function clearAndSeed() {
+  resetDb()
+  initDb()
+}
+
+module.exports.clearAndSeed = clearAndSeed
