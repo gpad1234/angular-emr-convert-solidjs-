@@ -2,8 +2,19 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug Jest (backend)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/backend-node",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--inspect-brk=9230", "./node_modules/.bin/jest", "--runInBand", "test/patients.test.js"],
+      "env": { "DATABASE_PATH": ":memory:" },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
       "name": "Launch Server (backend-node)",
-      "type": "pwa-node",
+      "type": "node",
       "request": "launch",
       "program": "${workspaceFolder}/backend-node/server.js",
       "cwd": "${workspaceFolder}/backend-node",
@@ -13,36 +24,20 @@
     },
     {
       "name": "Attach to Process",
-      "type": "pwa-node",
+      "type": "node",
       "request": "attach",
       "processId": "${command:PickProcess}"
     },
     {
-      "name": "Debug Jest (backend)",
-      "type": "pwa-node",
-      "request": "launch",
-      "cwd": "${workspaceFolder}/backend-node",
-      "runtimeExecutable": "node",
-      "runtimeArgs": ["--inspect-brk", "./node_modules/.bin/jest", "--runInBand"],
-      "console": "integratedTerminal",
-      "internalConsoleOptions": "neverOpen"
-    },
-    {
       "name": "Debug Vitest (frontend)",
-      "type": "pwa-node",
+      "type": "node",
       "request": "launch",
       "cwd": "${workspaceFolder}/frontend",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--inspect-brk", "./node_modules/.bin/vitest", "--run"],
+      "runtimeArgs": ["--inspect-brk=9231", "./node_modules/.bin/vitest", "--run"],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen"
-    }
-  ]
-}
-{
-  "version": "0.2.0",
-  "configurations": [
-
+    },
     {
       "name": "Debug Backend",
       "type": "node",
