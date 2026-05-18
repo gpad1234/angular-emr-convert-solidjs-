@@ -4,11 +4,10 @@
 # Usage: ./start.sh
 #
 # This script:
-#   1. Creates a Python virtual environment (if needed)
-#   2. Installs backend dependencies
-#   3. Starts FastAPI backend on port 8000
-#   4. Installs frontend dependencies
-#   5. Starts Next.js frontend on port 3000
+#   1. Installs backend Node.js dependencies (if needed)
+#   2. Starts Express backend on port 8000
+#   3. Installs frontend dependencies (if needed)
+#   4. Starts Vue/Vite frontend on port 3000
 #
 # Both processes run in parallel. Press Ctrl+C to stop both.
 
@@ -24,28 +23,21 @@ echo -e "${BLUE}Diabetes EMR — Starting development servers${NC}"
 echo "─────────────────────────────────────────────"
 
 # ── Backend setup ─────────────────────────────────────────────────────────────
-echo -e "${YELLOW}[Backend] Setting up Python environment...${NC}"
+echo -e "${YELLOW}[Backend] Setting up Node.js environment...${NC}"
 
-cd backend
+cd backend-node
 
 # Create virtual environment if it doesn't exist
-if [ ! -d "venv" ]; then
-  echo "[Backend] Creating virtual environment..."
-  python3 -m venv venv
+# Install npm dependencies if needed
+if [ ! -d "node_modules" ]; then
+  echo "[Backend] Installing npm packages..."
+  npm install
 fi
 
-# Activate virtual environment
-source venv/bin/activate
+echo -e "${GREEN}[Backend] Starting Express API on http://localhost:8000${NC}"
 
-# Install dependencies
-echo "[Backend] Installing dependencies..."
-pip install -r requirements.txt -q
-
-echo -e "${GREEN}[Backend] Starting FastAPI on http://localhost:8000${NC}"
-echo "[Backend] API docs: http://localhost:8000/docs"
-
-# Start FastAPI in background, capturing PID for cleanup
-uvicorn main:app --reload --port 8000 &
+# Start backend in background, capturing PID for cleanup
+npm run dev &
 BACKEND_PID=$!
 
 # Return to root
@@ -62,9 +54,9 @@ if [ ! -d "node_modules" ]; then
   npm install
 fi
 
-echo -e "${GREEN}[Frontend] Starting Next.js on http://localhost:3000${NC}"
+echo -e "${GREEN}[Frontend] Starting Vue/Vite on http://localhost:3000${NC}"
 
-# Start Next.js in background, capturing PID for cleanup
+# Start frontend in background, capturing PID for cleanup
 npm run dev &
 FRONTEND_PID=$!
 
@@ -74,8 +66,8 @@ cd ..
 # ── Wait and handle Ctrl+C ────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}Both servers are starting up!${NC}"
-echo "  App:     http://localhost:3000"
-echo "  API:     http://localhost:8000/docs"
+echo "  App:  http://localhost:3000"
+echo "  API:  http://localhost:8000/api/v1"
 echo ""
 echo "Press Ctrl+C to stop both servers."
 

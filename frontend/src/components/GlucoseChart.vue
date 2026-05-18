@@ -8,19 +8,20 @@
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import {
   Chart,
+  LineController,
   LineElement,
   PointElement,
   LinearScale,
   CategoryScale,
-  TimeScale,
   Tooltip,
   Legend,
+  Filler,
 } from 'chart.js'
 import annotationPlugin from 'chartjs-plugin-annotation'
 
 const props = defineProps({ readings: { type: Array, default: () => [] } })
 
-Chart.register(LineElement, PointElement, LinearScale, CategoryScale, TimeScale, Tooltip, Legend, annotationPlugin)
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend, Filler, annotationPlugin)
 
 const canvasRef = ref(null)
 let chartInstance = null

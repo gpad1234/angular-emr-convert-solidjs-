@@ -587,3 +587,10 @@ I can integrate vue-query for caching/revalidation (recommended to match SWR beh
 I can enhance GlucoseChart.vue with threshold lines, tooltips, and multi-series support.
 I can implement accessibility polish and keyboard navigation.
 Or I can stop here.
+
+
+Browser → http://localhost:3000
+           ↓ (Vite dev proxy for /api/*)
+           → http://localhost:8000/api/v1/...
+                ↓
+             SQLite DB (diabetes_emr.db)
