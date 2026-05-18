@@ -1,0 +1,57 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Server (backend-node)",
+      "type": "pwa-node",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend-node/server.js",
+      "cwd": "${workspaceFolder}/backend-node",
+      "env": { "NODE_ENV": "development" },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Attach to Process",
+      "type": "pwa-node",
+      "request": "attach",
+      "processId": "${command:PickProcess}"
+    },
+    {
+      "name": "Debug Jest (backend)",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/backend-node",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--inspect-brk", "./node_modules/.bin/jest", "--runInBand"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Debug Vitest (frontend)",
+      "type": "pwa-node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/frontend",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--inspect-brk", "./node_modules/.bin/vitest", "--run"],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ]
+}
+{
+  "version": "0.2.0",
+  "configurations": [
+
+    {
+      "name": "Debug Backend",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}/backend-node",
+      "program": "${workspaceFolder}/backend-node/server.js",
+      "runtimeExecutable": "node",
+      "skipFiles": ["<node_internals>/**"],
+      "console": "integratedTerminal"
+    }
+  ]
+}
