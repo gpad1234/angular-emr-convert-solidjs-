@@ -7,7 +7,7 @@
 #   1. Installs backend Node.js dependencies (if needed)
 #   2. Starts Express backend on port 8000
 #   3. Installs frontend dependencies (if needed)
-#   4. Starts Vue/Vite frontend on port 3000
+#   4. Starts SolidJS/Vite frontend on port 3000
 #
 # Both processes run in parallel. Press Ctrl+C to stop both.
 
@@ -54,7 +54,7 @@ if [ ! -d "node_modules" ]; then
   npm install
 fi
 
-echo -e "${GREEN}[Frontend] Starting Vue/Vite on http://localhost:3000${NC}"
+echo -e "${GREEN}[Frontend] Starting SolidJS/Vite on http://localhost:3000${NC}"
 
 # Start frontend in background, capturing PID for cleanup
 npm run dev &

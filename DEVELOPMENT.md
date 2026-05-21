@@ -1,144 +1,78 @@
-**Development Guide: Diabetes EMR (Express + Node.js backend, Vue frontend)**
+# Development Guide (Angular + Express)
 
-**Overview**:
-- **Backend**: Node.js + Express API in [backend-node/server.js](backend-node/server.js) (serves `/api/v1/*`, SQLite DB `diabetes_emr.db`).
-- **Frontend**: Vue 3 app (Vite) in [frontend](frontend), dev server on port 3000 proxying `/api` → `http://localhost:8000`.
+## Overview
 
-**Prerequisites**:
-- Node.js (tested on v22.x). Use `node -v` to verify.
-- npm (bundled with Node) or `pnpm`/`yarn` if preferred.
-- Git, a code editor (VS Code recommended).
+- Backend: Node.js + Express API in `backend-node` on port `8000`
+- Frontend: Angular 21 app in `angular-frontend` on port `4200`
+- Frontend API calls use `/api/v1/*`.
 
-**Quick setup (first time)**:
-1. Install backend deps and build native bindings (better-sqlite3):
+## Prerequisites
+
+- Node.js 18+
+- npm 10+
+
+## Install
+
+```bash
+cd backend-node && npm install
+cd ../angular-frontend && npm install
+```
+
+## Build
+
+The Angular frontend build is verified with:
+
+```bash
+cd angular-frontend
+npm run build
+```
+
+The build output is written to `angular-frontend/dist/angular-frontend`.
+
+## Run Locally
+
+### Backend
 
 ```bash
 cd backend-node
-npm install
-```
-
-2. Install frontend deps:
-
-```bash
-cd ../frontend
-npm install
-```
-
-**Run development servers (two terminals)**:
-
-Backend (auto-reload with nodemon):
-
-```bash
-cd backend-node
-npm run dev    # runs nodemon server.js
-```
-
-Frontend (Vite dev server with proxy):
-
-```bash
-cd frontend
 npm run dev
-# opens http://localhost:3000
 ```
 
-Alternatively run both with the helper script:
+The API listens on `http://localhost:8000`.
+
+### Frontend
 
 ```bash
-./start.sh
+cd angular-frontend
+npm start
 ```
 
-**Build & Preview (production static)**:
+The dev server listens on `http://localhost:4200`.
 
-1. Build the frontend static files:
+### Important note
 
-```bash
-cd frontend
-npm run build    # outputs static files to frontend/dist
-```
+The Angular app currently calls `/api/v1/*` with a relative URL and this workspace does not include a checked-in proxy configuration. If you want the browser UI to talk to the local backend while using `ng serve`, you will need to add a proxy or point the frontend at `http://localhost:8000` in your local environment. Without that, the frontend build still works, but API-backed screens will not reach the backend from the dev server.
 
-2. Preview the static site locally:
+## Tests
 
-```bash
-npm run preview   # serves dist/ (default port 4173)
-```
-
-3. (Optional) Serve `frontend/dist` from the Express backend for a single-process deployment. Example (add to [backend-node/server.js](backend-node/server.js)):
-
-```js
-const express = require('express')
-const path = require('path')
-app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')))
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html')))
-```
-
-**Database & Seed**:
-- The SQLite DB file is `diabetes_emr.db` (created by [backend-node/database.js](backend-node/database.js) on first run).
-- To reset the DB remove the file and restart the backend:
-
-```bash
-rm backend-node/diabetes_emr.db
-# then restart backend
-```
-
-**API basics**:
-- Base path: `/api/v1/`
-- Examples:
-
-```bash
-curl http://localhost:8000/api/v1/patients
-curl http://localhost:8000/api/v1/patients/1/summary
-```
-
-**Debugging**:
-- Quick logs: add `console.log` / `console.error` in route files (nodemon will reload).
-- Node Inspector (Chrome DevTools):
+Backend:
 
 ```bash
 cd backend-node
-node --inspect server.js
-# open chrome://inspect and click 'inspect'
+npm test
 ```
 
-- VS Code (recommended): We added a launch config at `.vscode/launch.json`. Press F5 → choose `Debug Backend` to run with breakpoints.
-
-**Frontend debugging**:
-- Vite HMR updates on file save. Use Vue Devtools in the browser to inspect components.
-
-**Common troubleshooting**:
-- "vite: command not found": run `cd frontend && npm install`.
-- `better-sqlite3` native build errors on new Node versions: remove and reinstall the binding:
+Frontend unit tests:
 
 ```bash
-cd backend-node
-rm -rf node_modules/better-sqlite3
-npm install
+cd angular-frontend
+npm test
 ```
 
-- If the frontend shows `toFixed` errors, ensure backend returns `latest_hba1c.value_percent` (server maps `value_pct` → `value_percent`).
+## Database Reset
 
-**Lint / Formatting / Tests**:
-- Frontend scripts in [frontend/package.json](frontend/package.json): `npm run dev`, `npm run build`, `npm run preview`, `npm run lint`.
-- Backend: no linter configured by default—consider adding `eslint`.
+```bash
+rm -f backend-node/diabetes_emr.db
+```
 
-**Environment & ports**:
-- Backend default port: `8000` (change via `process.env.PORT` in `server.js`).
-- Frontend default port: `3000` (Vite default).
-
-**Recommended VS Code tips**:
-- Open the workspace root in VS Code.
-- Use the `.vscode/launch.json` target `Debug Backend` (F5).
-- Install extensions: ESLint, Prettier, Vetur / Volar, Vue Devtools for browser.
-
-**Production considerations** (brief)
-- Use a proper RDB or managed DB for production instead of a single SQLite file.
-- Add environment configuration for secrets and ports (`dotenv`).
-- Serve static assets from CDN or behind a reverse proxy.
-- Harden CORS and authentication.
-
-**Next steps I can do for you**:
-- Add a `serve-static` route to `backend-node/server.js` to serve production `frontend/dist` automatically.
-- Add a `Makefile` or npm script at repo root to orchestrate `install`, `dev`, `build` tasks.
-- Add CI steps (GitHub Actions) to build and lint on PRs.
-
----
-Created by the dev helper. Ask me to add any of the optional changes above.
+Then restart the backend to recreate the schema and seed data.

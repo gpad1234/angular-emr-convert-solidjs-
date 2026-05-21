@@ -2,6 +2,35 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug Angular Tests",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "--inspect-brk",
+        "./node_modules/.bin/ng",
+        "test",
+        "--no-watch"
+      ],
+      "env": {
+        "NODE_OPTIONS": "--inspect=0"
+      },
+      "cwd": "${workspaceFolder}/angular-frontend",
+      "sourceMaps": true,
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/angular-frontend/src/**",
+        "!**/node_modules/**"
+      ],
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/@angular/build/**",
+        "**/node_modules/vitest/**",
+        "**/node_modules/vite/**"
+      ],
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
       "name": "Debug Jest (backend)",
       "type": "node",
       "request": "launch",

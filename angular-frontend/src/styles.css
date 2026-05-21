@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* ── Custom theme ──────────────────────────────────────────────────── */
+@theme {
+  --color-primary-50: #f0fdfa;
+  --color-primary-100: #ccfbf1;
+  --color-primary-200: #99f6e4;
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+
+  --color-glucose-critical: #dc2626;
+  --color-glucose-low: #f59e0b;
+  --color-glucose-normal: #16a34a;
+  --color-glucose-elevated: #d97706;
+  --color-glucose-high: #dc2626;
+}
+
+/* ── Utility shortcuts ─────────────────────────────────────────────── */
+@layer components {
+  .card {
+    @apply bg-white rounded-xl p-3 border border-gray-100 shadow-sm;
+  }
+  .stat-number {
+    font-size: 1.25rem;
+  }
+  .btn-primary {
+    @apply bg-primary-500 text-white rounded-lg py-2 px-3;
+  }
+  .section-title {
+    @apply text-sm font-semibold text-gray-700 uppercase tracking-wide;
+  }
+  .badge-normal   { @apply bg-green-100 text-green-800; }
+  .badge-low      { @apply bg-amber-100 text-amber-800; }
+  .badge-elevated { @apply bg-orange-100 text-orange-800; }
+  .badge-high     { @apply bg-red-100 text-red-800; }
+  .badge-critical { @apply bg-red-200 text-red-900; }
+}
